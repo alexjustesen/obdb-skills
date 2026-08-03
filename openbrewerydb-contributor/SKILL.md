@@ -1,0 +1,136 @@
+---
+name: openbrewerydb-contributor
+description: Add a new brewery/cidery/brewpub/bottleshop to the openbrewerydb/openbrewerydb dataset, or update an existing record's address, phone, website, type, or closed status — then open a pull request with the changes. Trigger this whenever the user names a brewery plus a general location (city/state or country) and wants it added or corrected in Open Brewery DB, or mentions "openbrewerydb," "open brewery db," "the dataset," or submitting brewery data via PR. Always validate the brewery with web search and geocode its address with the Geocodio CLI before touching any CSV file.
+---
+
+# OpenBreweryDB Contributor
+
+Adds or updates brewery records in the `openbrewerydb/openbrewerydb` dataset repo and opens a PR. The user gives a brewery name and a general location (city/state, or just a country); this skill researches it, resolves the correct CSV file, geocodes it, shows a diff for confirmation, then commits and opens the PR.
+
+Assume the repo is already cloned locally. If you don't know the path, ask once, then use it for the rest of the session.
+
+## Workflow
+
+### 0. Check prerequisites before doing any research or editing
+
+Confirm these up front, before spending effort on research the workflow can't finish without:
+- `git` works in the repo path, and `npm` is available with a `package.json` that actually defines `validate` and `csv:combine` scripts.
+- `gh` is installed and authenticated (`gh auth status`), since a PR is always required at the end (step 10).
+- The Geocodio CLI is installed and `GEOCODIO_API_KEY` is set.
+
+If `git`/`npm`/`gh` are missing or broken, **stop and tell the user exactly what's missing** before doing any web research or CSV edits — don't do the research first and discover the blocker at step 6 or 10.
+
+Geocodio is the one exception that can degrade gracefully rather than blocking everything: a brewery can still be validly added/updated without coordinates. If Geocodio isn't installed or the API key isn't set, say so plainly, then **ask the user for the latitude/longitude directly** rather than proceeding with the field blank unprompted — they may well have it on hand, and asking costs little. If they don't have it either, leave it blank and note in the diff summary (step 8) that it's **"not geocoded — Geocodio unavailable."**
+
+### 1. Sync the repo before doing anything
+
+```bash
+cd <repo-path>
+git checkout master
+git pull origin master
+```
+
+Do this at the start of every session (and again before opening a PR) so you're never working from a stale copy. If there are uncommitted local changes in the way, stop and tell the user rather than stashing/discarding anything for them.
+
+### 2. Re-read the schema from the live repo — don't trust a hardcoded schema
+
+Before building any row, check the actual current state of the dataset:
+- Read `README.md` and `CONTRIBUTING.md` in the repo root for the current contribution rules.
+- Read the header row of the CSV file you're about to touch to get the exact current column order and names. If unsure which file, `breweries.csv` is fine to check for the header shape only — remember it's a generated file and never a write target (see step 5).
+
+The dataset's `tags` column has been removed — do not include it even if older docs mention it. Trust the CSV header over any doc or memory of the schema.
+
+Known-as-of-now columns (confirm against the live header each run): `id` (never set by you — assigned on merge), `name`, `brewery_type`, `address_1`, `address_2`, `address_3`, `city`, `state_province`, `postal_code`, `country`, `longitude`, `latitude`, `phone`, `website_url`.
+
+Valid `brewery_type` values (from https://openbrewerydb.org/documentation#by_type): `micro`, `nano`, `regional`, `brewpub`, `large`, `planning`, `bar`, `contract`, `proprietor`, `closed`. Re-check that URL if it's been a while, since this enum can change.
+
+### 3. Research and validate the brewery
+
+Given the name + rough location the user provided, web search to confirm:
+- It's a real, currently-operating (or knowingly closed) brewery/cidery/brewpub/bottleshop
+- Its full street address
+- Its official website
+- Its phone number
+- Signals for `brewery_type` (e.g. "brewpub" language on their own site, self-description as a taproom/large regional brand, etc.)
+- Any signal it has **closed** (recent news, "permanently closed" on its own site or listings, no longer answering) — check this even on a plain "add" request, since a just-closed brewery should probably be flagged rather than added as active
+
+**If you can't confirm the brewery with real confidence — ambiguous name, no findable official site/address, conflicting info — stop and ask the user for more detail** (exact city, street, alternate name) rather than guessing or adding a low-confidence row.
+
+**Resolving conflicting field values (don't treat every disagreement as a stop condition):** third-party directories (Yelp, Brewbound, Beer Syndicate, etc.) frequently disagree with each other on phone numbers and other details — this is normal, not a sign you can't confirm the brewery itself. Resolve it like this, in order:
+1. Prefer whatever the brewery's own official website states.
+2. If the official site doesn't list it, prefer a value that's corroborated by two or more independent third-party sources over a single outlier.
+3. Only stop and ask the user if neither of the above resolves it (e.g. every source disagrees with no majority, or the official site is unreachable/nonexistent).
+
+Note in the diff summary (step 8) when a field was resolved this way, so the user can see it wasn't a single unverified source.
+
+**Never fabricate a field.** If a value genuinely can't be found in any search result, leave it blank/null rather than inferring something plausible-sounding (this applies especially to phone, website, and address_2/3 — it's normal and correct for these to be empty). Every non-blank field in the diff summary should be traceable to something an actual search result stated, not something inferred from general knowledge of what breweries are usually like.
+
+**Weight source recency for anything status-related** (closed signals, address/ownership changes) — a "permanently closed" claim or address change from a week-old source outweighs a two-year-old listing still showing it open, and vice versa. Prefer the brewery's own site or the most recently updated third-party source when they disagree on something that can change over time.
+
+### 4. Decide: new record or update to an existing one?
+
+Search the relevant CSV(s) for a possible existing match. **Match on normalized name, not literal string equality** — case, punctuation, whitespace, and common suffix variants ("Brewing Co" vs "Brewing Company" vs "Brewing Company, LLC") shouldn't cause a real match to be missed and create a duplicate row. Only treat it as the *same* brewery (i.e., an update) if you're highly confident based on multiple matching attributes together — e.g. name + city + state_province, or name + postal code — not name alone (brewery names repeat across regions/chains). If it's ambiguous whether this is a new entry or an existing one, stop and ask the user rather than guessing.
+
+**Watch for sibling/related locations sharing a name and street** — e.g. a brewery that also runs a separate taproom, food hall, or experimental-brewing spinoff at a different address on the same street. Match on the full address, not just name + city/street, or you risk silently updating the wrong sibling location.
+
+- **New brewery** → go to step 5.
+- **Update** → identify exactly which fields are actually changing (phone, website, address, type, closed status, etc.) and only touch those.
+
+### 5. Resolve the target CSV file (new records only)
+
+**Never hand-edit `breweries.csv`.** It's a generated file, rebuilt from the individual state/province/country CSVs by running `npm run csv:combine` — not a source file itself. Always make additions/updates in the per-region source file, then regenerate (step 6).
+
+- If a CSV already exists for that state/province or country, add the row there.
+- If this is the first brewery for a country with no existing file, create a new CSV for that country, matching the exact header/column order of the existing files.
+- Insert the new row in **alphabetical order by `name`** within the file — this is the dataset's sort convention, not something to detect per-file.
+- **Match the file's existing formatting conventions** before writing your row — look at a handful of neighboring rows for how phone numbers are formatted, how addresses are abbreviated (e.g. "St" vs "Street"), and how the country name is spelled (e.g. "United States" vs "USA"). Don't introduce a new convention even if it seems more "correct" — consistency with the existing file matters more here.
+
+### 6. Validate, then regenerate `breweries.csv`
+
+This applies after **any** edit to a source CSV — new record or update alike. Run it **once, after all edits for this session's breweries are staged** — not once per brewery — since re-running `csv:combine` after every single row is wasted work when you already know more edits are coming in the same session.
+
+1. Run `npm run validate` first, always. It catches bad data in your edit (formatting, required fields, enum values, etc.) — fix anything it flags before moving on.
+2. Only once validation passes, run `npm run csv:combine` to rebuild `breweries.csv` from the source files.
+
+Never edit `breweries.csv` by hand, and never run `csv:combine` without validating first.
+
+Note: postal codes are country-specific and some countries genuinely don't have one — leave it blank rather than guessing a format for a country you're not sure about.
+
+### 7. Geocode the address
+
+Use the Geocodio CLI — see `references/geocodio-cli.md` for exact commands and free-tier limits.
+
+- **Check country coverage before attempting to geocode**: on Geocodio's free tier, only US, Canada, and Mexico addresses can be geocoded — anything else (UK included) requires a paid plan. If the brewery's country isn't covered, don't attempt the call — ask the user for the latitude/longitude directly (see below) rather than silently proceeding without it.
+- **1–10 addresses in this session**: geocode individually.
+- **More than 10 addresses**: use the batch feature instead of individual calls, and be mindful of the free tier's 1,000/minute and 2,500/day request caps — a large batch could hit the daily limit partway through, so check remaining quota first rather than discovering a rate-limit error mid-batch with some addresses done and others not.
+- Only accept a geocoding result with a high accuracy score (treat this as ≥ 0.7 on Geocodio's 0–1 accuracy scale — confirm this mapping matches what you meant before relying on it, since Geocodio's own docs describe accuracy as a 0–1.0 score, not 0–10).
+- **A high accuracy score isn't a full guarantee** — rural or newly-built addresses can still return a high-confidence match to the wrong nearby point. Sanity-check the result's returned city/state against what you already confirmed in step 3; if they don't match, treat it as unreliable regardless of the numeric score.
+
+**Whenever geocoding is a miss or unavailable — no result, low accuracy, wrong city/state, country not covered on the plan, or the tool/API key isn't set up — ask the user for the latitude/longitude directly instead of silently leaving the row incomplete.** Only fall back to leaving `latitude`/`longitude` blank if the user doesn't have it either; note that explicitly in the diff summary (step 8), distinguishing *why* it's blank ("Geocodio unavailable" / "low accuracy, user didn't have coordinates" / "country not covered on current plan, user didn't have coordinates") so whoever reviews the diff knows it wasn't just skipped.
+
+If geocoding more than 10 addresses, batch processing may not return results synchronously (list/spreadsheet uploads can be an async job) — confirm the actual behavior with `geocodio --help` / the batch command's output rather than assuming it returns inline, and don't proceed to commit coordinates you haven't actually confirmed came back correctly.
+
+### 8. Always show a diff summary before writing anything
+
+For every brewery in this batch, show the user:
+- **New record**: the full row as it will be written, and which file it's going into (or "new file: `<country>.csv`" if applicable).
+- **Update**: old value → new value for each field that's changing, and which file/row.
+
+Wait for confirmation only if something is uncertain (see step 3/4 stop conditions) — otherwise proceed to writing after presenting the diff, since the user has already asked for the add/update.
+
+### 9. Commit each brewery separately
+
+One commit per brewery, even if several are being added/updated in the same session, so the repo owner can review/revert individually. Regenerating `breweries.csv` (step 6) is its own separate commit, not folded into a brewery's commit. See `references/git-pr-workflow.md` for branch naming and commit message conventions.
+
+### 10. Push and open the PR
+
+Always open a PR (never commit straight to master, even though you're a maintainer). Push the branch and open the PR with `gh pr create`, with a PR body that aggregates the diff summaries from step 8 for every brewery included. See `references/git-pr-workflow.md` for the exact commands.
+
+## When to stop and ask instead of proceeding
+
+- Required tooling is missing or broken — `git`, `npm`/the repo's scripts, or `gh` not installed/authenticated (step 0). Geocodio missing is the one exception: degrade gracefully, don't block (step 0/7) — but do ask the user for lat/long directly rather than silently proceeding without it.
+- Can't confirm the brewery is real / can't find a reliable address, or sources conflict with no majority (step 3)
+- Ambiguous whether this is a new brewery or a match to an existing row, including sibling/related locations sharing a name and street (step 4)
+- `npm run validate` fails and the fix isn't obvious (step 6)
+- Geocoding is a miss for any reason — low accuracy, wrong city/state, unavailable tool, or country not covered on the plan (step 7) — ask the user for coordinates before falling back to leaving them blank
+- Uncommitted local changes are already sitting in the repo (step 1)
