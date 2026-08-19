@@ -2,6 +2,8 @@
 
 Assumes `gh` (GitHub CLI) is installed and authenticated, and the repo remote is already configured with push access (or a fork remote, if that's how this repo is contributed to — check `git remote -v` if unsure). These should already have been confirmed at step 0 of `SKILL.md` — if you're here and they weren't checked, go back and check first.
 
+The npm commands in the upstream repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts) are owner-only publication tools. Never run them, invoke their implementation files directly, reproduce their mutating behavior, or include their generated output in a contributor commit. This includes `npm run validate`, `npm run csv:combine`, and every generation, contributor, and maintenance command listed there. See the mandatory owner-only scripts rule in `SKILL.md`.
+
 ## 1. Branch
 
 Create one branch per session/request, off freshly-pulled `master`:
@@ -32,9 +34,7 @@ git commit -m "Update <Brewery Name>: <what changed, e.g. phone, website>"
 
 Keep messages specific about what changed, not just "update csv."
 
-If the repo's generation script regenerates `breweries.csv` and that regenerated file is meant to be committed too, do that as its own separate commit (e.g. `git commit -m "Regenerate breweries.csv via npm run csv:combine"`) — never fold a hand-edit of `breweries.csv` into a brewery's commit, since it's a build artifact, not something edited directly.
-
-Before any of this, always run `npm run validate` after editing a source CSV and before running `npm run csv:combine` — fix anything it flags first.
+Commit only the appropriate per-region source CSV. Do not edit or regenerate root-level `breweries.csv`, `breweries.json`, `breweries.sql`, IDs, statistics, or contributor files; the repository owner handles those publication artifacts after merge.
 
 ## 3. Push and open the PR
 
@@ -43,6 +43,6 @@ git push -u origin add-breweries-<short-description-or-date>
 gh pr create --title "<short summary, e.g. 'Add 3 Connecticut breweries'>" --body "<aggregated diff summary>"
 ```
 
-The PR body should restate the per-brewery diff summaries already shown to the user in chat (new row contents, or old→new for updates), so the PR is self-documenting for the reviewer — don't make them dig through commits to see what changed.
+The PR body should restate the per-brewery diff summaries already shown to the user in chat (new row contents, or old→new for updates), so the PR is self-documenting for the reviewer — don't make them dig through commits to see what changed. State that owner-only publication scripts were intentionally not run and generated artifacts were intentionally not changed.
 
 Always open a PR — never push directly to `master`, even for trivial one-field updates.

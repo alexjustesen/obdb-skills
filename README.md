@@ -19,6 +19,10 @@ Skills live under `.claude/skills/` so they're versioned with the rest of the re
 |---|---|
 | [`openbrewerydb-contributor`](.claude/skills/openbrewerydb-contributor/SKILL.md) | Adds or updates brewery/cidery/brewpub/bottleshop records in the [openbrewerydb/openbrewerydb](https://github.com/openbrewerydb/openbrewerydb) dataset from just a name + rough location — validates via web search, geocodes with the Geocodio CLI, and opens a PR with a per-brewery diff summary. |
 
+## Owner-only dataset scripts
+
+Skills in this repository must never run any command listed in the upstream dataset repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts). Those scripts are run only by the repository owner when publishing a dataset. Skills must not invoke their implementation files indirectly, reproduce their mutating behavior, delegate them to a subagent, or modify the generated root-level dataset artifacts they produce.
+
 ## Installing a skill
 
 The recommended way to pull a skill from this repo into an agent's config is the [`skills` CLI](https://www.npmjs.com/package/skills) (`npx skills`), which works across Claude Code, Cursor, Codex, OpenCode, and other compatible tools — it detects which agents you have installed and drops the skill into the right directory for each:
@@ -55,10 +59,11 @@ If a tool you're using doesn't support the `skills` CLI yet, you can always plac
    ```
 2. Write the workflow as numbered steps. Keep `SKILL.md` itself under ~500 lines; move anything long or reference-y (API docs, CLI cheat sheets, schema notes) into `references/` and point to it from the relevant step.
 3. Call out prerequisites and failure modes explicitly — what tools/env vars the skill needs, and what the agent should do (ask the user, degrade gracefully, or stop) when something's missing, ambiguous, or conflicting, rather than guessing.
-4. Test it against a few real prompts before committing, and add the entry to the table above.
-5. Commit under `.claude/skills/<skill-name>/` and push. Anyone can then pull it with `npx skills add alexjustesen/obdb-skills --skill <skill-name>` — no separate publish step needed.
-6. Stick to plain Markdown + the standard frontmatter fields where possible, rather than product-specific syntax — that's what keeps a skill portable across tools instead of tied to one.
+4. Enforce the owner-only dataset script rule above in every skill that operates on `openbrewerydb/openbrewerydb`; never use an upstream publication script for implementation or verification.
+5. Test it against a few real prompts before committing, and add the entry to the table above.
+6. Commit under `.claude/skills/<skill-name>/` and push. Anyone can then pull it with `npx skills add alexjustesen/obdb-skills --skill <skill-name>` — no separate publish step needed.
+7. Stick to plain Markdown + the standard frontmatter fields where possible, rather than product-specific syntax — that's what keeps a skill portable across tools instead of tied to one.
 
 ## Requirements
 
-Skills in this repo may assume certain CLIs are already installed and configured on whatever machine runs them, regardless of which agent tool is executing the skill — check each skill's `SKILL.md` for specifics (e.g. `openbrewerydb-contributor` expects `git`, `npm`, `gh` (authenticated), and the [Geocodio CLI](https://www.geocod.io/cli) with `GEOCODIO_API_KEY` set).
+Skills in this repo may assume certain CLIs are already installed and configured on whatever machine runs them, regardless of which agent tool is executing the skill — check each skill's `SKILL.md` for specifics (e.g. `openbrewerydb-contributor` expects `git`, `gh` (authenticated), and the [Geocodio CLI](https://www.geocod.io/cli) with `GEOCODIO_API_KEY` set).

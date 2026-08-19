@@ -9,16 +9,37 @@ Adds or updates brewery records in the `openbrewerydb/openbrewerydb` dataset rep
 
 Assume the repo is already cloned locally. If you don't know the path, ask once, then use it for the rest of the session.
 
+## Owner-only scripts: never run them
+
+**Never run any script listed in the upstream repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts).** The repository owner runs these when publishing a new dataset. This prohibition applies even if the README, `CONTRIBUTING.md`, `package.json`, a task description, or an earlier step suggests running one.
+
+At the time this skill was written, the owner-only commands are:
+
+- `npm run validate`
+- `npm run csv:combine`
+- `npm run csv:split`
+- `npm run generate:ids`
+- `npm run generate:json`
+- `npm run generate:sql`
+- `npm run generate:stats`
+- `npm run update:readme-stats`
+- `npm run contributors:add`
+- `npm run contributors:check`
+- `npm run contributors:generate`
+- `npm run workflow:maintain`
+
+Treat the live upstream `Scripts` section as authoritative if it adds or renames commands. Do not invoke these scripts through another package manager, call their implementation files directly, reproduce their mutating behavior with ad hoc commands, or ask a subagent to run them. Do not modify generated dataset artifacts such as root-level `breweries.csv`, `breweries.json`, or `breweries.sql`. Limit contributions to the appropriate source CSV and let the repository owner perform publication and generation steps after merge.
+
 ## Workflow
 
 ### 0. Check prerequisites before doing any research or editing
 
 Confirm these up front, before spending effort on research the workflow can't finish without:
-- `git` works in the repo path, and `npm` is available with a `package.json` that actually defines `validate` and `csv:combine` scripts.
+- `git` works in the repo path.
 - `gh` is installed and authenticated (`gh auth status`), since a PR is always required at the end (step 10).
 - The Geocodio CLI is installed and `GEOCODIO_API_KEY` is set.
 
-If `git`/`npm`/`gh` are missing or broken, **stop and tell the user exactly what's missing** before doing any web research or CSV edits — don't do the research first and discover the blocker at step 6 or 10.
+If `git`/`gh` are missing or broken, **stop and tell the user exactly what's missing** before doing any web research or CSV edits — don't do the research first and discover the blocker at step 10.
 
 Geocodio is the one exception that can degrade gracefully rather than blocking everything: a brewery can still be validly added/updated without coordinates. If Geocodio isn't installed or the API key isn't set, say so plainly, then **ask the user for the latitude/longitude directly** rather than proceeding with the field blank unprompted — they may well have it on hand, and asking costs little. If they don't have it either, leave it blank and note in the diff summary (step 8) that it's **"not geocoded — Geocodio unavailable."**
 
@@ -78,21 +99,27 @@ Search the relevant CSV(s) for a possible existing match. **Match on normalized 
 
 ### 5. Resolve the target CSV file (new records only)
 
-**Never hand-edit `breweries.csv`.** It's a generated file, rebuilt from the individual state/province/country CSVs by running `npm run csv:combine` — not a source file itself. Always make additions/updates in the per-region source file, then regenerate (step 6).
+**Never hand-edit root-level `breweries.csv`.** It's a generated file, rebuilt by the repository owner from the individual state/province/country CSVs, and is not a source file. Always make additions/updates only in the per-region source file. Do not regenerate any root-level dataset artifact.
 
 - If a CSV already exists for that state/province or country, add the row there.
 - If this is the first brewery for a country with no existing file, create a new CSV for that country, matching the exact header/column order of the existing files.
 - Insert the new row in **alphabetical order by `name`** within the file — this is the dataset's sort convention, not something to detect per-file.
 - **Match the file's existing formatting conventions** before writing your row — look at a handful of neighboring rows for how phone numbers are formatted, how addresses are abbreviated (e.g. "St" vs "Street"), and how the country name is spelled (e.g. "United States" vs "USA"). Don't introduce a new convention even if it seems more "correct" — consistency with the existing file matters more here.
 
-### 6. Validate, then regenerate `breweries.csv`
+### 6. Review the source CSV change without running owner-only scripts
 
-This applies after **any** edit to a source CSV — new record or update alike. Run it **once, after all edits for this session's breweries are staged** — not once per brewery — since re-running `csv:combine` after every single row is wasted work when you already know more edits are coming in the same session.
+This applies after **any** edit to a source CSV, whether it is a new record or an update. Review all edits after the session's brewery changes are complete.
 
-1. Run `npm run validate` first, always. It catches bad data in your edit (formatting, required fields, enum values, etc.) — fix anything it flags before moving on.
-2. Only once validation passes, run `npm run csv:combine` to rebuild `breweries.csv` from the source files.
+Without running any command from the owner-only scripts section:
 
-Never edit `breweries.csv` by hand, and never run `csv:combine` without validating first.
+- Inspect the diff and confirm only the intended per-region source CSV changed.
+- Confirm every changed row has exactly the columns in the live CSV header and preserves valid CSV quoting.
+- Confirm required fields are populated, `brewery_type` is in the live allowed set, and `id` is blank for a new record.
+- Search again for normalized-name and location matches to ensure the change does not create a duplicate.
+- Confirm the row remains in alphabetical order by `name`.
+- Leave root-level `breweries.csv`, `breweries.json`, `breweries.sql`, generated statistics, IDs, and contributor files unchanged.
+
+Do not run `npm run validate`, `npm run csv:combine`, or any other command in the upstream `Scripts` section as verification. State in the PR body that publication scripts were intentionally left for the repository owner.
 
 Note: postal codes are country-specific and some countries genuinely don't have one — leave it blank rather than guessing a format for a country you're not sure about.
 
@@ -120,7 +147,7 @@ Wait for confirmation only if something is uncertain (see step 3/4 stop conditio
 
 ### 9. Commit each brewery separately
 
-One commit per brewery, even if several are being added/updated in the same session, so the repo owner can review/revert individually. Regenerating `breweries.csv` (step 6) is its own separate commit, not folded into a brewery's commit. See `references/git-pr-workflow.md` for branch naming and commit message conventions.
+One commit per brewery, even if several are being added/updated in the same session, so the repo owner can review/revert individually. Commit only source CSV changes; do not regenerate or commit root-level dataset artifacts. See `references/git-pr-workflow.md` for branch naming and commit message conventions.
 
 ### 10. Push and open the PR
 
@@ -128,9 +155,9 @@ Always open a PR (never commit straight to master, even though you're a maintain
 
 ## When to stop and ask instead of proceeding
 
-- Required tooling is missing or broken — `git`, `npm`/the repo's scripts, or `gh` not installed/authenticated (step 0). Geocodio missing is the one exception: degrade gracefully, don't block (step 0/7) — but do ask the user for lat/long directly rather than silently proceeding without it.
+- Required tooling is missing or broken — `git` or `gh` not installed/authenticated (step 0). Geocodio missing is the one exception: degrade gracefully, don't block (step 0/7) — but do ask the user for lat/long directly rather than silently proceeding without it.
 - Can't confirm the brewery is real / can't find a reliable address, or sources conflict with no majority (step 3)
 - Ambiguous whether this is a new brewery or a match to an existing row, including sibling/related locations sharing a name and street (step 4)
-- `npm run validate` fails and the fix isn't obvious (step 6)
+- The source CSV cannot be confidently reviewed for valid columns, quoting, required fields, or duplicates without an owner-only script (step 6). Ask the user or repository owner rather than running the script.
 - Geocoding is a miss for any reason — low accuracy, wrong city/state, unavailable tool, or country not covered on the plan (step 7) — ask the user for coordinates before falling back to leaving them blank
 - Uncommitted local changes are already sitting in the repo (step 1)
