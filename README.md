@@ -17,7 +17,7 @@ Skills live under `.claude/skills/` so they're versioned with the rest of the re
 
 | Skill | What it does |
 |---|---|
-| [`openbrewerydb-contributor`](.claude/skills/openbrewerydb-contributor/SKILL.md) | Adds or updates brewery/cidery/brewpub/bottleshop records in the [openbrewerydb/openbrewerydb](https://github.com/openbrewerydb/openbrewerydb) dataset from just a name + rough location — validates via web search, geocodes with the Geocodio CLI, and opens a PR with a per-brewery diff summary. |
+| [`openbrewerydb-contributor`](.claude/skills/openbrewerydb-contributor/SKILL.md) | Adds, deletes, or updates brewery/cidery/brewpub/bottleshop records in the [openbrewerydb/openbrewerydb](https://github.com/openbrewerydb/openbrewerydb) dataset, creates one commit per change, and opens a PR with sourced old/new comparison tables. |
 
 ## Owner-only dataset scripts
 
