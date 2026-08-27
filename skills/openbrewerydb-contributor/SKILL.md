@@ -9,11 +9,11 @@ Adds, deletes, or updates brewery records in the `openbrewerydb/openbrewerydb` d
 
 Assume the repo is already cloned locally. If you don't know the path, ask once, then use it for the rest of the session.
 
-## Owner-only scripts: never run them
+## Maintainer-only npm scripts: never run them
 
-**Never run any script listed in the upstream repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts).** The repository owner runs these when publishing a new dataset. This prohibition applies even if the README, `CONTRIBUTING.md`, `package.json`, a task description, or an earlier step suggests running one.
+**Never run any npm script in the upstream dataset repository.** The repository maintainer runs npm scripts only as part of the merge and publication workflow. This prohibition includes every command in the upstream repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts), any undocumented or newly added npm script, and npm aliases such as `npm test` or `npm start`. It applies even if the README, `CONTRIBUTING.md`, `package.json`, a task description, or an earlier step suggests running one. Do not run `npm install` in the dataset repository because package lifecycle hooks can execute npm scripts.
 
-At the time this skill was written, the owner-only commands are:
+Non-exhaustive examples that existed when this skill was written:
 
 - `npm run validate`
 - `npm run csv:combine`
@@ -28,7 +28,7 @@ At the time this skill was written, the owner-only commands are:
 - `npm run contributors:generate`
 - `npm run workflow:maintain`
 
-Treat the live upstream `Scripts` section as authoritative if it adds or renames commands. Do not invoke these scripts through another package manager, call their implementation files directly, reproduce their mutating behavior with ad hoc commands, or ask a subagent to run them. Do not modify generated dataset artifacts such as root-level `breweries.csv`, `breweries.json`, or `breweries.sql`. Limit contributions to the appropriate source CSV and let the repository owner perform publication and generation steps after merge.
+Do not invoke npm scripts through another package manager, call their implementation files directly, reproduce their mutating behavior with ad hoc commands, or ask a subagent to run them. Do not modify generated dataset artifacts such as root-level `breweries.csv`, `breweries.json`, or `breweries.sql`. Limit contributions to the appropriate source CSV and let the repository maintainer run all npm scripts and perform publication and generation steps when merging the changes.
 
 ## Workflow
 
@@ -63,7 +63,7 @@ Before building any row, check the actual current state of the dataset:
 
 The dataset's `tags` column has been removed — do not include it even if older docs mention it. Trust the CSV header over any doc or memory of the schema.
 
-Known-as-of-now columns (confirm against the live header each run): `id` (never set by you — assigned on merge), `name`, `brewery_type`, `address_1`, `address_2`, `address_3`, `city`, `state_province`, `postal_code`, `country`, `longitude`, `latitude`, `phone`, `website_url`.
+Known-as-of-now columns (confirm against the live header each run): `id` (never set by you — assigned by the repository maintainer when merging), `name`, `brewery_type`, `address_1`, `address_2`, `address_3`, `city`, `state_province`, `postal_code`, `country`, `longitude`, `latitude`, `phone`, `website_url`.
 
 Valid `brewery_type` values (from https://openbrewerydb.org/documentation#by_type): `micro`, `nano`, `regional`, `brewpub`, `large`, `planning`, `bar`, `contract`, `proprietor`, `closed`. Re-check that URL if it's been a while, since this enum can change.
 
@@ -96,24 +96,25 @@ Search the relevant CSV(s) for a possible existing match. **Match on normalized 
 
 **Watch for sibling/related locations sharing a name and street** — e.g. a brewery that also runs a separate taproom, food hall, or experimental-brewing spinoff at a different address on the same street. Match on the full address, not just name + city/street, or you risk silently updating the wrong sibling location.
 
-- **Addition** → go to step 5 and add one new row.
+- **Addition** → go to step 5 and add one new row with an empty `id`; never generate, copy, or invent one.
 - **Deletion** → remove only the confidently matched row. Confirm and document why deletion, rather than changing `brewery_type` to `closed`, is appropriate.
 - **Update** → identify exactly which fields are actually changing (phone, website, address, type, closed status, etc.) and only touch those.
 
 ### 5. Resolve the target source CSV
 
-**Never hand-edit root-level `breweries.csv`.** It's a generated file, rebuilt by the repository owner from the individual state/province/country CSVs, and is not a source file. Always make additions, deletions, and updates only in the per-region source file. Do not regenerate any root-level dataset artifact.
+**Never hand-edit root-level `breweries.csv`.** It's a generated file, rebuilt by the repository maintainer from the individual state/province/country CSVs, and is not a source file. Always make additions, deletions, and updates only in the per-region source file. Do not regenerate any root-level dataset artifact.
 
 - If a CSV already exists for that state/province or country, add the row there.
 - If this is the first brewery for a country with no existing file, create a new CSV for that country, matching the exact header/column order of the existing files.
+- For every addition, leave the `id` field empty. Preserve the column and its delimiter in the CSV, but do not use a placeholder value; the repository maintainer assigns the ID when merging the change.
 - Insert the new row in **alphabetical order by `name`** within the file — this is the dataset's sort convention, not something to detect per-file.
 - **Match the file's existing formatting conventions** before writing your row — look at a handful of neighboring rows for how phone numbers are formatted, how addresses are abbreviated (e.g. "St" vs "Street"), and how the country name is spelled (e.g. "United States" vs "USA"). Don't introduce a new convention even if it seems more "correct" — consistency with the existing file matters more here.
 
-### 6. Review the source CSV change without running owner-only scripts
+### 6. Review the source CSV change without running maintainer-only scripts
 
 This applies after **any** edit to a source CSV, whether it is an addition, deletion, or update. Review each change before committing it.
 
-Without running any command from the owner-only scripts section:
+Without running any npm script or its implementation:
 
 - Inspect the diff and confirm only the intended per-region source CSV changed.
 - Confirm every changed row has exactly the columns in the live CSV header and preserves valid CSV quoting.
@@ -122,7 +123,7 @@ Without running any command from the owner-only scripts section:
 - Confirm the row remains in alphabetical order by `name`.
 - Leave root-level `breweries.csv`, `breweries.json`, `breweries.sql`, generated statistics, IDs, and contributor files unchanged.
 
-Do not run `npm run validate`, `npm run csv:combine`, or any other command in the upstream `Scripts` section as verification. State in the PR body that publication scripts were intentionally left for the repository owner.
+Do not run `npm run validate`, `npm run csv:combine`, or any other npm script as verification. State in the PR body that all npm scripts were intentionally left for the repository maintainer's merge and publication workflow.
 
 Note: postal codes are country-specific and some countries genuinely don't have one — leave it blank rather than guessing a format for a country you're not sure about.
 
@@ -171,6 +172,6 @@ After opening the PR, add one PR comment per change/commit. Each comment must id
 - Required tooling is missing or broken — `git` or `gh` not installed/authenticated (step 0). Geocodio missing is the one exception: degrade gracefully, don't block (step 0/7) — but do ask the user for lat/long directly rather than silently proceeding without it.
 - Can't confirm the brewery is real / can't find a reliable address, or sources conflict with no majority (step 3)
 - Ambiguous whether this is a new brewery or a match to an existing row, including sibling/related locations sharing a name and street (step 4)
-- The source CSV cannot be confidently reviewed for valid columns, quoting, required fields, or duplicates without an owner-only script (step 6). Ask the user or repository owner rather than running the script.
+- The source CSV cannot be confidently reviewed for valid columns, quoting, required fields, blank IDs on additions, or duplicates without a maintainer-only script (step 6). Ask the user or repository maintainer rather than running the script.
 - Geocoding is a miss for any reason — low accuracy, wrong city/state, unavailable tool, or country not covered on the plan (step 7) — ask the user for coordinates before falling back to leaving them blank
 - Uncommitted local changes are already sitting in the repo (step 1)

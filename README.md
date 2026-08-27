@@ -19,9 +19,9 @@ Skills live under `.claude/skills/` so they're versioned with the rest of the re
 |---|---|
 | [`openbrewerydb-contributor`](.claude/skills/openbrewerydb-contributor/SKILL.md) | Adds, deletes, or updates brewery/cidery/brewpub/bottleshop records in the [openbrewerydb/openbrewerydb](https://github.com/openbrewerydb/openbrewerydb) dataset, creates one commit per change, and opens a PR with sourced old/new comparison tables. |
 
-## Owner-only dataset scripts
+## Maintainer-only dataset scripts
 
-Skills in this repository must never run any command listed in the upstream dataset repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts). Those scripts are run only by the repository owner when publishing a dataset. Skills must not invoke their implementation files indirectly, reproduce their mutating behavior, delegate them to a subagent, or modify the generated root-level dataset artifacts they produce.
+Skills in this repository must never run any npm script in the upstream dataset repository, including undocumented or newly added scripts and aliases such as `npm test` or `npm start`. Do not run `npm install` there because package lifecycle hooks can execute npm scripts. These scripts are run only by the repository maintainer as part of the merge and publication workflow. Skills must not invoke their implementation files directly or through another package manager, reproduce their mutating behavior, delegate them to a subagent, or modify the generated root-level dataset artifacts they produce.
 
 ## Installing a skill
 
@@ -59,7 +59,7 @@ If a tool you're using doesn't support the `skills` CLI yet, you can always plac
    ```
 2. Write the workflow as numbered steps. Keep `SKILL.md` itself under ~500 lines; move anything long or reference-y (API docs, CLI cheat sheets, schema notes) into `references/` and point to it from the relevant step.
 3. Call out prerequisites and failure modes explicitly — what tools/env vars the skill needs, and what the agent should do (ask the user, degrade gracefully, or stop) when something's missing, ambiguous, or conflicting, rather than guessing.
-4. Enforce the owner-only dataset script rule above in every skill that operates on `openbrewerydb/openbrewerydb`; never use an upstream publication script for implementation or verification.
+4. Enforce the maintainer-only npm script rule above in every skill that operates on `openbrewerydb/openbrewerydb`; never use an upstream npm script for implementation or verification.
 5. Test it against a few real prompts before committing, and add the entry to the table above.
 6. Commit under `.claude/skills/<skill-name>/` and push. Anyone can then pull it with `npx skills add alexjustesen/obdb-skills --skill <skill-name>` — no separate publish step needed.
 7. Stick to plain Markdown + the standard frontmatter fields where possible, rather than product-specific syntax — that's what keeps a skill portable across tools instead of tied to one.

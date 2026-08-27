@@ -2,7 +2,7 @@
 
 Assumes `gh` (GitHub CLI) is installed and authenticated, and the repo has a writable remote (the canonical repository or a fork). Check `git remote -v` rather than assuming `origin` points to the canonical repository. These should already have been confirmed at step 0 of `SKILL.md`; if they were not, go back and check first.
 
-The npm commands in the upstream repository's [`Scripts` section](https://github.com/openbrewerydb/openbrewerydb#%EF%B8%8F-scripts) are owner-only publication tools. Never run them, invoke their implementation files directly, reproduce their mutating behavior, or include their generated output in a contributor commit. This includes `npm run validate`, `npm run csv:combine`, and every generation, contributor, and maintenance command listed there. See the mandatory owner-only scripts rule in `SKILL.md`.
+All npm scripts in the upstream dataset repository are maintainer-only tools, including undocumented or newly added scripts and aliases such as `npm test` or `npm start`. Never run them, invoke their implementation files directly or through another package manager, reproduce their mutating behavior, delegate them, or include their generated output in a contributor commit. Do not run `npm install` in the dataset repository because package lifecycle hooks can execute npm scripts. The maintainer runs these scripts only as part of the merge and publication workflow. See the mandatory maintainer-only npm scripts rule in `SKILL.md`.
 
 ## 1. Branch
 
@@ -51,7 +51,7 @@ git commit -m "Remove <Brewery Name> from <state_or_country>.csv"
 
 Keep messages specific about what changed, not just "update csv."
 
-Commit only the appropriate per-region source CSV. Do not edit or regenerate root-level `breweries.csv`, `breweries.json`, `breweries.sql`, IDs, statistics, or contributor files; the repository owner handles those publication artifacts after merge.
+Commit only the appropriate per-region source CSV. Do not edit or regenerate root-level `breweries.csv`, `breweries.json`, `breweries.sql`, IDs, statistics, or contributor files; the repository maintainer handles those publication artifacts when merging the changes.
 
 Before pushing, compare the branch with canonical `master` and confirm that the commit count equals the number of additions, deletions, and updates. If a commit contains more than one change, split it before opening the PR.
 
@@ -75,7 +75,7 @@ The PR body must start with these exact paragraphs, preserving their wording and
 >
 > If you need help or have any questions, join our Discord: https://discord.gg/3G3syaD
 
-Below those paragraphs, add a `## Change log` section with one entry per commit in commit order. Each entry must include the short commit SHA, action (`Add`, `Delete`, or `Update`), brewery name, and a one-line summary. End the body by stating that owner-only publication scripts were intentionally not run and generated artifacts were intentionally not changed.
+Below those paragraphs, add a `## Change log` section with one entry per commit in commit order. Each entry must include the short commit SHA, action (`Add`, `Delete`, or `Update`), brewery name, and a one-line summary. End the body by stating that no npm scripts were run because they are reserved for the maintainer's merge and publication workflow, and that generated artifacts were intentionally not changed.
 
 After creation, verify the PR URL is under `openbrewerydb/openbrewerydb` and its base branch is `master`:
 
