@@ -1,0 +1,10 @@
+id,name,brewery_type,address_1,address_2,address_3,city,state_province,postal_code,country,phone,website_url,longitude,latitude
+id-1,Alpha Brewing, micro,1 Main St,,,Testville,Test State,12345,United States,5551112222,https://alpha.example,-71,42
+
+id-1,Alpha Brewing,micro,1 Main St,,,Testville,Test State,12345,United States,5551112222,https://alpha.example,-71,42
+,Beta Brewing,invalid-type,2 Main St,,,Other City,Test State,,United States,,not-url,,42
+id-3,Gamma Brewing,micro,3 Main St,,,Third City,Test State,12345,United States,,,45,-122
+id-5,Alpha Brewing,micro,8 Main St,,,Fourth City,Test State,12347,United States,5551112222,https://alpha.example,-70,41
+id-6,Alpha Brewing,micro,10 Main St,,,Testville,Test State,12348,United States,5551112222,https://alpha.example,-70.5,41.5
+id-7,Sparse Brewing,micro,,,,Testville,Test State,12349,United States,5553334444,https://sparse.example,-70.6,41.6
+id-8,Sparse Brewing,micro,,,,Testville,Test State,12349,United States,5553334444,https://sparse.example,-70.7,41.7

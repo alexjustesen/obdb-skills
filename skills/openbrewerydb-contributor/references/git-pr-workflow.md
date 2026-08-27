@@ -1,6 +1,6 @@
 # Git & PR workflow
 
-Assumes `gh` (GitHub CLI) is installed and authenticated, and the repo has a writable remote (the canonical repository or a fork). Check `git remote -v` rather than assuming `origin` points to the canonical repository. These should already have been confirmed at step 0 of `SKILL.md`; if they were not, go back and check first.
+Assumes `gh` is authenticated and the repo has a writable remote for the authenticated account. Check `git remote -v`, `gh api user --jq .login`, and remote ownership rather than assuming `origin` is canonical or writable. Confirm this at step 0 before research.
 
 All npm scripts in the upstream dataset repository are maintainer-only tools, including undocumented or newly added scripts and aliases such as `npm test` or `npm start`. Never run them, invoke their implementation files directly or through another package manager, reproduce their mutating behavior, delegate them, or include their generated output in a contributor commit. Do not run `npm install` in the dataset repository because package lifecycle hooks can execute npm scripts. The maintainer runs these scripts only as part of the merge and publication workflow. See the mandatory maintainer-only npm scripts rule in `SKILL.md`.
 
@@ -11,13 +11,16 @@ Create one branch per session/request from the latest `master` of the canonical 
 Every branch name must use `<epoch-seconds>-<github-username>`. Get the Unix epoch timestamp at branch creation time and the GitHub username from the authenticated `gh` account; do not substitute a descriptive name, date string, display name, or email address.
 
 ```bash
+git status --short
 git checkout master
-git pull <upstream-remote> master
+git pull --ff-only <upstream-remote> master
 GITHUB_USERNAME="$(gh api user --jq .login)"
 EPOCH_TIMESTAMP="$(date +%s)"
 BRANCH_NAME="${EPOCH_TIMESTAMP}-${GITHUB_USERNAME}"
 git checkout -b "$BRANCH_NAME"
 ```
+
+Run `git status --short` before switching branches and stop if it prints anything. Never carry, stash, clean, or discard pre-existing work for this workflow.
 
 For example, an epoch timestamp of `1787145600` and GitHub username `alexjustesen` produce `1787145600-alexjustesen`. Keep `BRANCH_NAME` unchanged for the entire workflow.
 
@@ -55,6 +58,14 @@ Commit only the appropriate per-region source CSV. Do not edit or regenerate roo
 
 Before pushing, compare the branch with canonical `master` and confirm that the commit count equals the number of additions, deletions, and updates. If a commit contains more than one change, split it before opening the PR.
 
+```bash
+git fetch <upstream-remote> master
+git rev-list --count HEAD..<upstream-remote>/master
+git diff --check <upstream-remote>/master...HEAD
+```
+
+If the behind count is not zero, stop and update the branch without discarding user work before opening the PR.
+
 ## 3. Push and open the PR against the canonical repository
 
 Push the branch to a writable remote, then explicitly target `openbrewerydb/openbrewerydb:master`. Do not rely on `gh` inferring the base repository from the current remote.
@@ -66,21 +77,21 @@ gh pr create \
   --base master \
   --head "<head-owner>:${BRANCH_NAME}" \
   --title "<short summary>" \
-  --body-file <pr-body-file>
+  --body-file <temporary-pr-body-outside-worktree>
 ```
 
 The PR body must start with these exact paragraphs, preserving their wording and blank lines:
 
-> This pull request includes changes to the OpenBreweryDB dataset. Each change is it's own commit and a full log of changes can be found below. Review all the changes to ensure the best data quality
+> This pull request includes changes to the OpenBreweryDB dataset. Each change is its own commit and a full log of changes can be found below. Review all the changes to ensure the best data quality.
 >
 > If you need help or have any questions, join our Discord: https://discord.gg/3G3syaD
 
 Below those paragraphs, add a `## Change log` section with one entry per commit in commit order. Each entry must include the short commit SHA, action (`Add`, `Delete`, or `Update`), brewery name, and a one-line summary. End the body by stating that no npm scripts were run because they are reserved for the maintainer's merge and publication workflow, and that generated artifacts were intentionally not changed.
 
-After creation, verify the PR URL is under `openbrewerydb/openbrewerydb` and its base branch is `master`:
+Create PR body and comment files outside the dataset worktree so they cannot be committed accidentally. After creation, verify the PR URL is under `openbrewerydb/openbrewerydb`, its base is `master`, and only intended source CSVs changed:
 
 ```bash
-gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json url,baseRefName,commits
+gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json url,baseRefName,commits,files
 ```
 
 ## 4. Add one sourced diff comment per change
@@ -111,9 +122,9 @@ For additions, include every field and use `(none)` for old values. For deletion
 Post each prepared comment with:
 
 ```bash
-gh pr comment <pr-url> --repo openbrewerydb/openbrewerydb --body-file <change-comment-file>
+gh pr comment <pr-url> --repo openbrewerydb/openbrewerydb --body-file <temporary-comment-outside-worktree>
 ```
 
-Finally, inspect the PR comments and confirm there is exactly one sourced table comment for every change commit. Do not consider the workflow complete until all comments are present.
+Finally, inspect the PR comments and confirm there is exactly one sourced table comment for every change commit. Then inspect GitHub Actions with `gh pr checks <pr-url> --repo openbrewerydb/openbrewerydb --watch`. Report failures and their logs without running the corresponding npm scripts locally. Do not consider the workflow complete until comments are present and checks have reached a terminal state.
 
 Always open a PR — never push directly to `master`, even for trivial one-field updates.
