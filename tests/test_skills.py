@@ -44,6 +44,12 @@ class SkillMetadataTests(unittest.TestCase):
             self.assertIn("npm", content, path)
             self.assertRegex(content, r"never run|do not run")
 
+    def test_contributor_never_generates_ids_for_additions(self):
+        content = (SKILLS / "openbrewerydb-contributor" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("## New breweries never get an ID", content)
+        for term in ("uuidgen", "uuid4", "randomUUID", "generate:ids", "placeholder", "`+,`"):
+            self.assertIn(term, content)
+
     def test_analysis_skills_are_read_only_and_issue_ready(self):
         for name in (
             "openbrewerydb-data-quality-auditor",

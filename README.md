@@ -38,6 +38,10 @@ The auditor, discovery, and entity-linker skills are read-only and return issue-
 
 Skills in this repository must never run any npm script in the upstream dataset repository, including undocumented or newly added scripts and aliases such as `npm test` or `npm start`. Do not run `npm install` there because package lifecycle hooks can execute npm scripts. These scripts are run only by the repository maintainer as part of the merge and publication workflow. Skills must not invoke their implementation files directly or through another package manager, reproduce their mutating behavior, delegate them to a subagent, or modify the generated root-level dataset artifacts they produce.
 
+## Brewery IDs are maintainer-assigned
+
+When adding a new brewery, skills must leave the `id` field empty. They must never generate a UUID (with `uuidgen`, a UUID library, the `generate:ids` script, or any other method), copy an ID from another record, or insert a placeholder. The repository maintainer assigns IDs when merging.
+
 ## Installing a skill
 
 The recommended way to pull a skill from this repo into an agent's config is the [`skills` CLI](https://www.npmjs.com/package/skills) (`npx skills`), which works across Claude Code, Cursor, Codex, OpenCode, and other compatible tools — it detects which agents you have installed and drops the skill into the right directory for each:

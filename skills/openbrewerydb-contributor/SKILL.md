@@ -30,6 +30,19 @@ Non-exhaustive examples that existed when this skill was written:
 
 Do not invoke npm scripts through another package manager, call their implementation files directly, reproduce their mutating behavior with ad hoc commands, or ask a subagent to run them. Do not modify generated dataset artifacts such as root-level `breweries.csv`, `breweries.json`, or `breweries.sql`. Limit contributions to the appropriate source CSV and let the repository maintainer run all npm scripts and perform publication and generation steps when merging the changes.
 
+## New breweries never get an ID: leave `id` empty
+
+**Never create, generate, copy, or invent an `id` for a new brewery.** The repository maintainer assigns the UUID when merging. Every other row in the file having a UUID is not a reason to add one to yours.
+
+This prohibition covers every way an ID could be produced, including:
+
+- UUID tools or libraries such as `uuidgen`, Python `uuid.uuid4()`, `crypto.randomUUID()`, `node -e`, or an online UUID generator.
+- The `generate:ids` npm script, its implementation file, or any reproduction of its logic.
+- Copying an ID from another row, a deleted row, a sibling location, an API response, or an earlier contribution.
+- Placeholders such as `TBD`, `new`, `null`, `0`, `-`, or `""`.
+
+Keep the `id` column and its delimiter so the column count still matches the header. Because `id` is the first column, a new row starts with a comma, for example `,Alpha Brewing,micro,...`. Existing rows keep their current `id` unchanged for updates; never regenerate, reformat, or replace an existing ID.
+
 ## Workflow
 
 ### 0. Check prerequisites before doing any research or editing
@@ -145,7 +158,8 @@ Write only the proposed change, then review it without running any npm script or
 - Confirm only the intended source CSV changed.
 - Confirm each changed row follows the live header, column count, and CSV quoting.
 - Confirm required fields satisfy the live schema. If a real country lacks a postal code but the live schema requires one, stop for maintainer guidance instead of inventing a value.
-- Confirm the type exists in live `BREWERY_TYPES` and additions have an empty `id` field with no placeholder.
+- Confirm the type exists in live `BREWERY_TYPES`.
+- Confirm every added row has an empty `id` field with no placeholder. With `id` as the first column, each added line in `git diff --cached -U0 <source-csv>` must start with `+,`. If any addition has a value in `id`, remove it before committing.
 - Recheck duplicates, sibling locations, and alphabetical order.
 - Leave generated datasets, statistics, IDs, and contributor files unchanged.
 

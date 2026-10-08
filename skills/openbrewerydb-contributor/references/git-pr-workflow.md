@@ -54,6 +54,8 @@ git commit -m "Remove <Brewery Name> from <state_or_country>.csv"
 
 Keep messages specific about what changed, not just "update csv."
 
+For an addition, the staged diff must show the new row with an empty `id` (the added line starts with `+,`). Never commit a generated, copied, or placeholder ID; see the ID rule in `SKILL.md`.
+
 Commit only the appropriate per-region source CSV. Do not edit or regenerate root-level `breweries.csv`, `breweries.json`, `breweries.sql`, IDs, statistics, or contributor files; the repository maintainer handles those publication artifacts when merging the changes.
 
 Before pushing, compare the branch with canonical `master` and confirm that the commit count equals the number of additions, deletions, and updates. If a commit contains more than one change, split it before opening the PR.
@@ -117,7 +119,7 @@ Add one separate PR comment for every change/commit, in the same order as the co
 <Sourcing notes, conflict resolution, geocoding details, and reason for the change.>
 ```
 
-For additions, include every field and use `(none)` for old values. For deletions, include every field and use `(none)` for new values. For updates, include only changed fields. Use actual source URLs, not generic source names, and explain any conflicting data or unavailable coordinates.
+For additions, include every field and use `(none)` for old values; show the `id` new value as `(blank)` because the maintainer assigns it when merging. For deletions, include every field and use `(none)` for new values. For updates, include only changed fields. Use actual source URLs, not generic source names, and explain any conflicting data or unavailable coordinates.
 
 Post each prepared comment with:
 
