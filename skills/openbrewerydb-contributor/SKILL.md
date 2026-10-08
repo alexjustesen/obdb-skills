@@ -171,9 +171,9 @@ A change is one addition, one deletion, or one update to one brewery record. Mak
 
 ### 10. Push and open the PR
 
-Always open a PR against the `master` branch of the canonical `openbrewerydb/openbrewerydb` repository. Never commit or push directly to `master`, even if you have access. The PR body must begin with the exact required message in `references/git-pr-workflow.md` and include a commit-by-commit change log below it.
+Always open a PR against the `master` branch of the canonical `openbrewerydb/openbrewerydb` repository. Never commit or push directly to `master`, even if you have access.
 
-After opening the PR, add one PR comment per change/commit. Each comment must identify the corresponding commit, explain the change, list its data sources and sourcing notes, and include the old/new Markdown table from step 7. Verify the target, comments, changed files, and GitHub Actions status before reporting completion. Upstream CI may run maintainer-configured checks; do not reproduce them locally. See `references/git-pr-workflow.md`.
+Use the `openbrewerydb-pull-request` skill to push the branch and open the PR. It sets the `data: <short description>` title and writes a body with a summary and one section per changed record, containing the old/new table from step 7 and that change's sources and notes. Pass along the sources and sourcing notes gathered in step 3, since the PR skill cannot recover them from the diff. Upstream CI may run maintainer-configured checks; do not reproduce them locally.
 
 ## When to stop and ask instead of proceeding
 

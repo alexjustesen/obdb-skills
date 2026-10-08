@@ -68,65 +68,8 @@ git diff --check <upstream-remote>/master...HEAD
 
 If the behind count is not zero, stop and update the branch without discarding user work before opening the PR.
 
-## 3. Push and open the PR against the canonical repository
+## 3. Open the PR with the `openbrewerydb-pull-request` skill
 
-Push the branch to a writable remote, then explicitly target `openbrewerydb/openbrewerydb:master`. Do not rely on `gh` inferring the base repository from the current remote.
-
-```bash
-git push -u <writable-remote> "$BRANCH_NAME"
-gh pr create \
-  --repo openbrewerydb/openbrewerydb \
-  --base master \
-  --head "<head-owner>:${BRANCH_NAME}" \
-  --title "<short summary>" \
-  --body-file <temporary-pr-body-outside-worktree>
-```
-
-The PR body must start with these exact paragraphs, preserving their wording and blank lines:
-
-> This pull request includes changes to the OpenBreweryDB dataset. Each change is its own commit and a full log of changes can be found below. Review all the changes to ensure the best data quality.
->
-> If you need help or have any questions, join our Discord: https://discord.gg/3G3syaD
-
-Below those paragraphs, add a `## Change log` section with one entry per commit in commit order. Each entry must include the short commit SHA, action (`Add`, `Delete`, or `Update`), brewery name, and a one-line summary. End the body by stating that no npm scripts were run because they are reserved for the maintainer's merge and publication workflow, and that generated artifacts were intentionally not changed.
-
-Create PR body and comment files outside the dataset worktree so they cannot be committed accidentally. After creation, verify the PR URL is under `openbrewerydb/openbrewerydb`, its base is `master`, and only intended source CSVs changed:
-
-```bash
-gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json url,baseRefName,commits,files
-```
-
-## 4. Add one sourced diff comment per change
-
-Add one separate PR comment for every change/commit, in the same order as the commits. Use this Markdown structure:
-
-```markdown
-## <Add|Delete|Update>: <Brewery Name>
-
-**Commit:** `<short-sha>`
-**Source file:** `<path-to-source-csv>`
-
-| Field | Old value | New value |
-|---|---|---|
-| `<field>` | `<old value or (none)>` | `<new value or (none)>` |
-
-### Sources
-
-- <source URL and what it verifies>
-
-### Notes
-
-<Sourcing notes, conflict resolution, geocoding details, and reason for the change.>
-```
-
-For additions, include every field and use `(none)` for old values; show the `id` new value as `(blank)` because the maintainer assigns it when merging. For deletions, include every field and use `(none)` for new values. For updates, include only changed fields. Use actual source URLs, not generic source names, and explain any conflicting data or unavailable coordinates.
-
-Post each prepared comment with:
-
-```bash
-gh pr comment <pr-url> --repo openbrewerydb/openbrewerydb --body-file <temporary-comment-outside-worktree>
-```
-
-Finally, inspect the PR comments and confirm there is exactly one sourced table comment for every change commit. Then inspect GitHub Actions with `gh pr checks <pr-url> --repo openbrewerydb/openbrewerydb --watch`. Report failures and their logs without running the corresponding npm scripts locally. Do not consider the workflow complete until comments are present and checks have reached a terminal state.
+Once every change is committed and the branch is current with canonical `master`, hand off to the `openbrewerydb-pull-request` skill. It pushes the branch, targets `openbrewerydb/openbrewerydb:master` explicitly, titles the PR `data: <short description>`, and writes a body with a summary plus one section per changed record containing the old/new attribute table, sources, and notes. It then verifies the PR and watches GitHub Actions.
 
 Always open a PR — never push directly to `master`, even for trivial one-field updates.

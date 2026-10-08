@@ -28,7 +28,7 @@ def run_json(script, *args):
 class SkillMetadataTests(unittest.TestCase):
     def test_skill_frontmatter_and_directory_names(self):
         skill_files = sorted(SKILLS.glob("*/SKILL.md"))
-        self.assertEqual(4, len(skill_files))
+        self.assertEqual(5, len(skill_files))
         for path in skill_files:
             content = path.read_text(encoding="utf-8")
             match = re.match(r"---\n(.*?)\n---\n", content, re.DOTALL)
@@ -49,6 +49,20 @@ class SkillMetadataTests(unittest.TestCase):
         self.assertIn("## New breweries never get an ID", content)
         for term in ("uuidgen", "uuid4", "randomUUID", "generate:ids", "placeholder", "`+,`"):
             self.assertIn(term, content)
+
+    def test_pull_request_skill_defines_title_and_per_record_body(self):
+        skill = SKILLS / "openbrewerydb-pull-request"
+        content = (skill / "SKILL.md").read_text(encoding="utf-8")
+        template = (skill / "references" / "pr-body-template.md").read_text(encoding="utf-8")
+        self.assertIn("`data: <short description>`", content)
+        self.assertIn("--repo openbrewerydb/openbrewerydb", content)
+        self.assertIn("--base master", content)
+        for heading in ("## Summary", "## Changes", "### Add:", "### Update:", "### Delete:", "## Reviewer notes"):
+            self.assertIn(heading, template)
+        self.assertIn("| Field | Old value | New value |", template)
+        self.assertIn("join our Discord: https://discord.gg/3G3syaD", template)
+        for title in re.findall(r"^- `(data: [^`]+)`$", content, re.MULTILINE):
+            self.assertLess(len(title), 72, title)
 
     def test_analysis_skills_are_read_only_and_issue_ready(self):
         for name in (

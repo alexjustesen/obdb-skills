@@ -19,6 +19,7 @@ Skills live under `skills/` so compatible installers can discover them directly 
 | Skill | What it does |
 |---|---|
 | [`openbrewerydb-contributor`](skills/openbrewerydb-contributor/SKILL.md) | Researches and submits an explicit add, update, close, reopen, relocate, or delete request for known brewery records. This is the only skill that normally edits source CSVs. |
+| [`openbrewerydb-pull-request`](skills/openbrewerydb-pull-request/SKILL.md) | Opens the GitHub PR for committed dataset changes, with a `data:` title and a body containing a summary plus one attribute table per changed record. Used by the contributor skill as its final step. |
 | [`openbrewerydb-data-quality-auditor`](skills/openbrewerydb-data-quality-auditor/SKILL.md) | Audits source CSV structure, identities, completeness, coordinates, and operating status, then produces an issue-ready report without changing the dataset. |
 | [`openbrewerydb-brewery-discovery`](skills/openbrewerydb-brewery-discovery/SKILL.md) | Compares a regional, guild, regulator, or licensed inventory against all source CSVs to identify coverage gaps and produce a review inventory. |
 | [`openbrewerydb-entity-linker`](skills/openbrewerydb-entity-linker/SKILL.md) | Researches candidate Wikidata and OpenStreetMap links for existing records and reports confidence and conflicts without writing external IDs. |
@@ -28,6 +29,7 @@ Skills live under `skills/` so compatible installers can discover them directly 
 | Request | Skill |
 |---|---|
 | Change one or more known brewery records | `openbrewerydb-contributor` |
+| Open a PR for already-committed record changes | `openbrewerydb-pull-request` |
 | Audit existing records or stale statuses | `openbrewerydb-data-quality-auditor` |
 | Discover missing breweries or regional coverage gaps | `openbrewerydb-brewery-discovery` |
 | Match existing records to Wikidata or OpenStreetMap | `openbrewerydb-entity-linker` |
@@ -85,4 +87,4 @@ If a tool you're using doesn't support the `skills` CLI yet, you can always plac
 
 ## Requirements
 
-Skills in this repo may assume certain CLIs are already installed and configured. Check each `SKILL.md`: the contributor expects `git`, authenticated `gh`, and the [Geocodio CLI](https://www.geocod.io/cli) with `GEOCODIO_API_KEY`; the auditor and discovery helpers require Python 3 and use only its standard library.
+Skills in this repo may assume certain CLIs are already installed and configured. Check each `SKILL.md`: the contributor and pull-request skills expect `git` and authenticated `gh`; the contributor also expects the [Geocodio CLI](https://www.geocod.io/cli) with `GEOCODIO_API_KEY`; the auditor and discovery helpers require Python 3 and use only its standard library.
