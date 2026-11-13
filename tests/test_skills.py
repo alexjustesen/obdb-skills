@@ -50,17 +50,22 @@ class SkillMetadataTests(unittest.TestCase):
         for term in ("uuidgen", "uuid4", "randomUUID", "generate:ids", "placeholder", "`+,`"):
             self.assertIn(term, content)
 
-    def test_pull_request_skill_defines_title_and_per_record_body(self):
+    def test_pull_request_skill_defines_summary_body_and_per_record_comments(self):
         skill = SKILLS / "openbrewerydb-pull-request"
         content = (skill / "SKILL.md").read_text(encoding="utf-8")
         template = (skill / "references" / "pr-body-template.md").read_text(encoding="utf-8")
+        comment = (skill / "references" / "change-comment-template.md").read_text(encoding="utf-8")
         self.assertIn("`data: <short description>`", content)
         self.assertIn("--repo openbrewerydb/openbrewerydb", content)
         self.assertIn("--base master", content)
-        for heading in ("## Summary", "## Changes", "### Add:", "### Update:", "### Delete:", "## Reviewer notes"):
+        self.assertIn("gh pr comment", content)
+        for heading in ("## Summary", "## Changes", "## Reviewer notes"):
             self.assertIn(heading, template)
-        self.assertIn("| Field | Old value | New value |", template)
         self.assertIn("join our Discord: https://discord.gg/3G3syaD", template)
+        self.assertNotIn("| Field | Old value | New value |", template)
+        for heading in ("## Add:", "## Update:", "## Delete:", "**Sources**"):
+            self.assertIn(heading, comment)
+        self.assertIn("| Field | Old value | New value |", comment)
         for title in re.findall(r"^- `(data: [^`]+)`$", content, re.MULTILINE):
             self.assertLess(len(title), 72, title)
 
