@@ -19,7 +19,7 @@ Skills live under `skills/` so compatible installers can discover them directly 
 | Skill | What it does |
 |---|---|
 | [`openbrewerydb-contributor`](skills/openbrewerydb-contributor/SKILL.md) | Researches and submits an explicit add, update, close, reopen, relocate, or delete request for known brewery records. This is the only skill that normally edits source CSVs. |
-| [`openbrewerydb-pull-request`](skills/openbrewerydb-pull-request/SKILL.md) | Opens the GitHub PR for committed dataset changes, with a `data:` title and a body containing a summary plus one attribute table per changed record. Used by the contributor skill as its final step. |
+| [`openbrewerydb-pull-request`](skills/openbrewerydb-pull-request/SKILL.md) | Opens the GitHub PR for committed dataset changes, with a `data:` title, a body summarizing all the changes, and one PR comment per changed record with its attribute table and sources. Used by the contributor skill as its final step. |
 | [`openbrewerydb-data-quality-auditor`](skills/openbrewerydb-data-quality-auditor/SKILL.md) | Audits source CSV structure, identities, completeness, coordinates, and operating status, then produces an issue-ready report without changing the dataset. |
 | [`openbrewerydb-brewery-discovery`](skills/openbrewerydb-brewery-discovery/SKILL.md) | Compares a regional, guild, regulator, or licensed inventory against all source CSVs to identify coverage gaps and produce a review inventory. |
 | [`openbrewerydb-entity-linker`](skills/openbrewerydb-entity-linker/SKILL.md) | Researches candidate Wikidata and OpenStreetMap links for existing records and reports confidence and conflicts without writing external IDs. |

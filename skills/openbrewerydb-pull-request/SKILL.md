@@ -1,11 +1,11 @@
 ---
 name: openbrewerydb-pull-request
-description: Open a GitHub pull request for committed brewery record changes in the openbrewerydb/openbrewerydb dataset, with a "data:" title and a body containing a full description plus one section and attribute table per changed record. Use whenever a branch of dataset commits is ready to submit, when the openbrewerydb-contributor workflow reaches its PR step, or when the user asks to open, write, or fix an Open Brewery DB data PR. Do not use to research or edit records, for audits or discovery reports, or for pull requests to other repositories.
+description: Open a GitHub pull request for committed brewery record changes in the openbrewerydb/openbrewerydb dataset, with a "data:" title, a body that summarizes all the changes, and one PR comment per changed record with its attribute table and sources. Use whenever a branch of dataset commits is ready to submit, when the openbrewerydb-contributor workflow reaches its PR step, or when the user asks to open, write, or fix an Open Brewery DB data PR. Do not use to research or edit records, for audits or discovery reports, or for pull requests to other repositories.
 ---
 
 # OpenBreweryDB Pull Request
 
-Opens a pull request in `openbrewerydb/openbrewerydb` for a branch that already contains committed source CSV changes, and writes a title and body that let a maintainer review every record without opening the diff. Making the record changes is the job of `openbrewerydb-contributor`; this skill starts once the commits exist.
+Opens a pull request in `openbrewerydb/openbrewerydb` for a branch that already contains committed source CSV changes, with a title and a body that summarize the whole change, then posts one comment per changed record so a maintainer can review every record, with its sources, without opening the diff. Making the record changes is the job of `openbrewerydb-contributor`; this skill starts once the commits exist.
 
 ## Maintainer-only npm scripts: never run them
 
@@ -37,7 +37,7 @@ Stop and report to the user when:
 - A commit contains more than one record change, or there are no commits. Each record change must be its own commit so it can be reverted independently.
 - An added row has a value in `id`. New breweries get their ID from the maintainer when merging, so the added CSV line must start with an empty first column (`+,` in the diff).
 
-An open PR from the same branch also stops the workflow (`gh pr list --repo openbrewerydb/openbrewerydb --head <branch>`). Update that PR's body instead of opening a second one, and only when the user asks.
+An open PR from the same branch also stops the workflow (`gh pr list --repo openbrewerydb/openbrewerydb --head <branch>`). Do not open a second one. Only when the user asks, update that PR's body and post change comments for the commits that do not have one yet.
 
 ### 2. Build one change record per commit
 
@@ -69,23 +69,27 @@ Examples:
 - `data: add 4 breweries in Boulder County, CO`
 - `data: add 2 and update 3 breweries in Oregon`
 
-### 4. Write the body
+### 4. Write the body and the change comments
 
-Use the template in `references/pr-body-template.md`. It has four parts:
+The PR body summarizes all the changes; the detail for each record goes in its own comment. Write both before pushing, so a problem stops the workflow before anything is public.
+
+**Body.** Use `references/pr-body-template.md`. It has four parts:
 
 1. **Required opening paragraphs**, copied exactly. The maintainer expects this wording on every dataset PR.
 2. **`## Summary`**: a few sentences to a short paragraph describing the change as a whole: what changed and where, why (the user's request, a closure, a relocation, a discovery report), how it was researched, and the counts per action. A reviewer should understand the PR from this section alone.
-3. **`## Changes`**: one `###` section per record changed, in commit order, each with the commit SHA, source file, attribute table, sources, and notes. When a single record changed, still use one section, so every data PR has the same shape.
+3. **`## Changes`**: a table with one row per commit, in commit order: action, brewery name, city and state, and short SHA. Attribute tables, sources, and notes do not go in the body.
 4. **`## Reviewer notes`**: that no npm scripts were run, that generated artifacts and contributor files were left unchanged, and that new rows have a blank `id` for the maintainer to assign.
+
+**Change comments.** Use `references/change-comment-template.md` to write one comment per commit, in commit order, each with the action and brewery name as its heading, the commit SHA, source file, a sentence on why, the attribute table, sources, and notes. When a single record changed, still post one comment, so every data PR has the same shape.
 
 Table formatting:
 
 - Wrap field names in backticks (`` `phone` ``). Escape a literal `|` in a value as `\|`, and keep values on one line so the table doesn't break.
-- Keep the column order of the CSV header within each table, so tables are easy to compare against the file.
+- Keep the column order of the CSV header within each attribute table, so tables are easy to compare against the file.
 
-GitHub limits a PR body to 65,536 characters. If the body would exceed that, stop and suggest splitting the branch into smaller PRs rather than truncating the per-record sections.
+GitHub limits a PR body and each comment to 65,536 characters. If one would exceed that, stop and suggest splitting the branch into smaller PRs rather than truncating anything.
 
-Write the body to a temporary file outside the dataset worktree so it cannot be committed by accident.
+Write the body and each comment to temporary files outside the dataset worktree, numbered in commit order (`01-<short-sha>.md`, `02-<short-sha>.md`, ...), so they cannot be committed by accident.
 
 ### 5. Push and open the PR
 
@@ -101,21 +105,32 @@ gh pr create \
 
 Always target `openbrewerydb/openbrewerydb:master` explicitly; `gh` can otherwise infer the fork as the base. Never push directly to `master`.
 
-### 6. Verify
+### 6. Post the change comments
+
+Post the comments one at a time, in commit order, so they read in the same order as the commits:
 
 ```bash
-gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json url,title,baseRefName,body,commits,files
+gh pr comment <pr-url> --repo openbrewerydb/openbrewerydb --body-file <temporary-comment-file>
+```
+
+If a post fails, list the PR's comments (`gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json comments`) before retrying, and post only the comments whose commit SHA is not already there. Never post a duplicate.
+
+### 7. Verify
+
+```bash
+gh pr view <pr-url> --repo openbrewerydb/openbrewerydb --json url,title,baseRefName,body,commits,files,comments
 gh pr checks <pr-url> --repo openbrewerydb/openbrewerydb --watch
 ```
 
 Confirm that:
 
 - The title starts with `data: ` and the base is `master`.
-- The body starts with the required paragraphs and has one `## Changes` section per commit with matching SHAs.
+- The body starts with the required paragraphs and its `## Changes` table has one row per commit with matching SHAs.
+- The PR has exactly one change comment per commit, in commit order, each naming that commit's SHA.
 - Only the intended source CSVs changed.
 - Checks have reached a terminal state. Report failures with their logs; do not run the corresponding npm scripts.
 
-Report the PR URL, the title, and the check results to the user.
+Report the PR URL, the title, the number of change comments posted, and the check results to the user.
 
 ## When to stop and ask
 
@@ -123,4 +138,4 @@ Report the PR URL, the title, and the check results to the user.
 - The working tree is dirty, the branch is behind `master`, or a PR already exists for the branch.
 - The branch touches generated artifacts or non-source files, a commit holds more than one record change, or an addition has a non-blank `id`.
 - Sources for any change are unknown.
-- The body would exceed GitHub's size limit.
+- The body or a change comment would exceed GitHub's size limit.
