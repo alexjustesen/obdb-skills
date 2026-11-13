@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Prepares an Amp orb for developing and testing the skills in this repository.
+# Runs once per fresh orb and again on stale snapshots, so every step is idempotent.
+set -euo pipefail
+
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+dataset_dir="$(dirname "$repo_root")/openbrewerydb"
+
+step() {
+  local name="$1"
+  shift
+  local start=$SECONDS
+  echo "==> $name"
+  "$@"
+  echo "    done in $((SECONDS - start))s"
+}
+
+# The contributor skill geocodes addresses with the Geocodio CLI.
+install_geocodio() {
+  if command -v geocodio >/dev/null 2>&1; then
+    echo "    already installed: $(command -v geocodio)"
+    return
+  fi
+  curl -fsSL https://raw.githubusercontent.com/geocodio/geocodio-cli/main/install.sh | sh
+}
+
+# Link the working copy of the skills into Amp's highest-precedence skill directory,
+# so agents in this orb always load the skills as edited here.
+link_skills() {
+  mkdir -p "$HOME/.config/agents/skills"
+  ln -sfn "$repo_root/skills" "$HOME/.config/agents/skills/obdb-skills"
+}
+
+# Every skill operates on a local checkout of the upstream dataset. Clone it once;
+# never pull here, because the skills sync it themselves and refuse dirty checkouts.
+clone_dataset() {
+  if [ -d "$dataset_dir/.git" ]; then
+    echo "    already cloned: $dataset_dir"
+    return
+  fi
+  git clone --quiet https://github.com/openbrewerydb/openbrewerydb.git "$dataset_dir"
+}
+
+write_guidance() {
+  cat > "$HOME/.config/AGENTS.md" <<EOF
+# obdb-skills orb
+
+- The skills in \`$repo_root/skills\` are linked into \`~/.config/agents/skills/obdb-skills\`, so Amp loads the working copy. Run \`amp skill list\` after adding or renaming a skill to confirm discovery.
+- A clone of \`openbrewerydb/openbrewerydb\` is at \`$dataset_dir\` (remote \`origin\`). Use it as the dataset path when testing skills. It has no fork remote; the contributor and pull-request skills need one the authenticated \`gh\` account can push to.
+- Run the repository tests with \`python3 -m unittest discover -s tests\` from \`$repo_root\`.
+- The Geocodio CLI (\`geocodio\`) is installed, and \`GEOCODIO_API_KEY\` comes from the owner's Amp secrets, so geocoding works without extra configuration. Each lookup uses real API quota.
+EOF
+}
+
+step "Installing Geocodio CLI" install_geocodio
+step "Linking skills for Amp" link_skills
+step "Cloning openbrewerydb dataset" clone_dataset
+step "Writing orb agent guidance" write_guidance
